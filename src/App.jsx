@@ -20,12 +20,29 @@ function CharacterList() {
     navigate('/character/new');
   };
 
-  const handleDeleteCharacter = (characterId, event) => {
-    event.stopPropagation()
-    if (window.confirm('Sei sicuro di voler eliminare questo personaggio?')) {
+  const [deletingCharacter, setDeletingCharacter] = useState(null);
+  const [pressTimer, setPressTimer] = useState(null);
+
+  const handleDeleteStart = (characterId, event) => {
+    event.stopPropagation();
+    setDeletingCharacter(characterId);
+    
+    const timer = setTimeout(() => {
       deleteCharacter(characterId);
       setCharacters(loadCharacters());
+      setDeletingCharacter(null);
+    }, 2000);
+    
+    setPressTimer(timer);
+  };
+
+  const handleDeleteEnd = (event) => {
+    event.stopPropagation();
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      setPressTimer(null);
     }
+    setDeletingCharacter(null);
   };
 
   return (
@@ -61,10 +78,15 @@ function CharacterList() {
                   </div>
                   <div className="character-actions">
                     <button 
-                      className="delete-button"
-                      onClick={(e) => handleDeleteCharacter(character.id, e)}
+                      className={`delete-button ${deletingCharacter === character.id ? 'deleting' : ''}`}
+                      onMouseDown={(e) => handleDeleteStart(character.id, e)}
+                      onMouseUp={handleDeleteEnd}
+                      onMouseLeave={handleDeleteEnd}
+                      onTouchStart={(e) => handleDeleteStart(character.id, e)}
+                      onTouchEnd={handleDeleteEnd}
+                      onTouchCancel={handleDeleteEnd}
                     >
-                      🗑️
+                      {deletingCharacter === character.id ? '⏳' : '🗑️'}
                     </button>
                   </div>
                 </div>
@@ -82,20 +104,6 @@ function CharacterList() {
         </section>
       </main>
 
-      <nav className="bottom-nav">
-        <Link to="/" className="nav-item active">
-          <div className="nav-icon">👤</div>
-          <span>Personaggi</span>
-        </Link>
-        <Link to="/campaigns" className="nav-item">
-          <div className="nav-icon">🛡️</div>
-          <span>Campagne</span>
-        </Link>
-        <Link to="/settings" className="nav-item">
-          <div className="nav-icon">⚙️</div>
-          <span>Impostazioni</span>
-        </Link>
-      </nav>
     </div>
   );
 }

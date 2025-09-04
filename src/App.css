@@ -182,6 +182,21 @@ body {
   transform: scale(1.1);
 }
 
+.delete-button.deleting {
+  background: rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+  animation: pulse 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.05);
+  }
+}
+
 /* Stato vuoto */
 .empty-state {
   text-align: center;
