@@ -10,8 +10,7 @@ const CharacterView = () => {
   const [loading, setLoading] = useState(true);
   const [openSections, setOpenSections] = useState({
     attributes: false,
-    skills: false,
-    customFields: false
+    skills: false
   });
   const [activeTab, setActiveTab] = useState('sheet');
   const [editingSpell, setEditingSpell] = useState(null);
@@ -30,17 +29,6 @@ const CharacterView = () => {
     const characters = loadCharacters();
     const foundCharacter = characters.find(c => c.id === id);
     if (foundCharacter) {
-      // Assicurati che il campo "damageTaken" esista
-      const hasDamageField = foundCharacter.customFields.some(f => f.id === 'damageTaken');
-      if (!hasDamageField) {
-        foundCharacter.customFields.push({
-          id: 'damageTaken',
-          label: 'Danni Subiti',
-          value: '0',
-          type: 'number'
-        });
-        saveCharacter(foundCharacter);
-      }
       setCharacter(foundCharacter);
     } else {
       navigate('/');
@@ -95,6 +83,20 @@ const CharacterView = () => {
       // Salva automaticamente per tutti i campi custom
       saveCharacter(updatedCharacter);
       
+      return updatedCharacter;
+    });
+  };
+
+
+  const handleDamageTakenChange = (value) => {
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        damageTaken: parseInt(value) || 0,
+        updatedAt: new Date().toISOString()
+      };
+      
+      saveCharacter(updatedCharacter);
       return updatedCharacter;
     });
   };
@@ -500,8 +502,8 @@ const CharacterView = () => {
               <span className="stat-label">Danni Subiti</span>
               <input
                 type="number"
-                value={character.customFields.find(f => f.id === 'damageTaken')?.value || 0}
-                onChange={(e) => handleCustomFieldChange('damageTaken', e.target.value)}
+                value={character.damageTaken || 0}
+                onChange={(e) => handleDamageTakenChange(e.target.value)}
                 className="damage-input"
                 placeholder="0"
                 min="0"
@@ -513,7 +515,7 @@ const CharacterView = () => {
           {/* HP Attuali Calcolati */}
           {(() => {
             const maxHP = parseInt(character.customFields.find(f => f.id === 'hitPoints')?.value) || 0;
-            const damageTaken = parseInt(character.customFields.find(f => f.id === 'damageTaken')?.value) || 0;
+            const damageTaken = parseInt(character.damageTaken) || 0;
             const currentHP = Math.max(0, maxHP - damageTaken);
             
             if (maxHP > 0) {
@@ -664,43 +666,6 @@ const CharacterView = () => {
           )}
         </section>
 
-        {/* Custom Fields */}
-        {character.customFields.filter(f => f.id !== 'armorClass' && f.id !== 'speed').length > 0 && (
-          <section className="stats-card accordion-section">
-            <div className="accordion-header" onClick={() => toggleSection('customFields')}>
-              <h3 className="card-title">Informazioni Aggiuntive</h3>
-              <span className="accordion-icon">{openSections.customFields ? '▼' : '▶'}</span>
-            </div>
-            {openSections.customFields && (
-              <div className="accordion-content">
-                <div className="custom-fields-list">
-              {character.customFields
-                .filter(field => field.id !== 'armorClass' && field.id !== 'speed')
-                .map((field) => (
-                  <div key={field.id} className="custom-field-item">
-                    <span className="field-label">{field.label}</span>
-                    {field.type === 'textarea' ? (
-                      <textarea
-                        value={field.value}
-                        onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-                        className="field-textarea"
-                        rows="2"
-                      />
-                    ) : (
-                      <input
-                        type={field.type}
-                        value={field.value}
-                        onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-                        className="field-input"
-                      />
-                    )}
-                  </div>
-                ))}
-                </div>
-              </div>
-            )}
-          </section>
-        )}
           </>
         )}
       </div>

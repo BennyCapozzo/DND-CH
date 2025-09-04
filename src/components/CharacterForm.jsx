@@ -216,10 +216,10 @@ const CharacterForm = () => {
           </div>
         </section>
 
-        {/* Campi Personalizzati */}
+        {/* Base Stats */}
         <section className="form-section">
           <div className="section-header">
-            <h2 className="section-title">Campi Personalizzati</h2>
+            <h2 className="section-title">Base Stats</h2>
             <button className="add-field-button" onClick={addCustomField}>
               + Aggiungi Campo
             </button>

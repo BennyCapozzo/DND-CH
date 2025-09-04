@@ -23,6 +23,9 @@ export const createEmptyCharacter = () => ({
   // Caratteristica di lancio incantesimi
   spellcastingAbility: null, // 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'
   
+  // Statistiche di combattimento
+  damageTaken: 0,
+  
   // Competenze (array di stringhe)
   proficiencies: {
     savingThrows: [], // es. ['strength', 'constitution']
@@ -32,10 +35,8 @@ export const createEmptyCharacter = () => ({
   // Campi personalizzati (l'utente può aggiungere/rimuovere)
   customFields: [
     { id: 'hitPoints', label: 'Punti Ferita', value: '', type: 'number' },
-    { id: 'damageTaken', label: 'Danni Subiti', value: '0', type: 'number' },
     { id: 'armorClass', label: 'Classe Armatura', value: '', type: 'number' },
-    { id: 'speed', label: 'Velocità', value: '', type: 'text' },
-    { id: 'notes', label: 'Note', value: '', type: 'textarea' }
+    { id: 'speed', label: 'Velocità', value: '', type: 'text' }
   ],
   
   // Equipaggiamento e incantesimi (array di oggetti personalizzabili)
