@@ -1,0 +1,9 @@
+{
+    "routes": [
+      { "src": "/", "dest": "/" },
+      { "src": "/character/new", "dest": "/" },
+      { "src": "/character/:id", "dest": "/" },
+      { "src": "/character/:id/edit", "dest": "/" },
+      { "src": "/settings", "dest": "/" }
+    ]
+  }
