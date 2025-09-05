@@ -1088,6 +1088,11 @@ body {
   padding: 8px 0;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
   z-index: 1000;
+  transition: transform 0.3s ease;
+}
+
+.character-bottom-nav.hidden-fullscreen {
+  transform: translateY(100%);
 }
 
 .nav-tab {
@@ -1186,6 +1191,7 @@ body {
   border-radius: 8px;
   padding: 12px;
   transition: all 0.2s ease;
+  min-height: 48px;
 }
 
 .inventory-item:hover {
@@ -1224,6 +1230,10 @@ body {
 
 .item-name {
   flex: 1;
+  min-width: 0; /* Permette la riduzione del testo */
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .name-input {
@@ -1234,7 +1244,40 @@ body {
   color: #ffffff;
   font-size: 1rem;
   width: 100%;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  
+  /* Gestione del testo troppo lungo */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  
+  /* Font responsive */
+  font-size: clamp(0.8rem, 4vw, 1rem);
+  line-height: 1.2;
+  
+  /* Resize automatico */
+  resize: none;
+}
+
+.name-input.clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.name-input.clickable:hover {
+  border-color: rgba(255, 215, 0, 0.4);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.name-input.expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  height: auto !important;
+  min-height: 40px;
+  padding: 8px 12px;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .name-input:focus {
@@ -1245,6 +1288,21 @@ body {
 
 .name-input::placeholder {
   color: #888;
+}
+
+.expand-indicator {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ffd700;
+  font-size: 0.8rem;
+  pointer-events: none;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
 }
 
 .remove-item-button {
@@ -1281,6 +1339,7 @@ body {
   align-items: center;
   margin-bottom: 15px;
   min-height: 40px;
+  gap: 12px;
 }
 
 .spells-header .card-title {
@@ -1289,6 +1348,49 @@ body {
   display: flex;
   align-items: center;
   height: 36px;
+}
+
+/* Tiro Salvezza Globale */
+.global-spell-save-dc {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.save-dc-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.save-dc-label {
+  color: #ffd700;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.save-dc-value {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #1a1a1a;
+  font-weight: bold;
+  font-size: 1.4rem;
+  padding: 8px 16px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  min-width: 50px;
+  text-align: center;
+}
+
+.save-dc-formula {
+  color: #ffffff;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  font-style: italic;
 }
 
 .add-spell-button {
@@ -2068,10 +2170,80 @@ body {
 }
 
 .spell-details {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
   margin-bottom: 12px;
+}
+
+.spell-optional-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spell-option {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.1);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.spell-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.spell-checkbox {
+  accent-color: #ffd700;
+  transform: scale(1.2);
+}
+
+.spell-conditional-field {
+  margin-top: 8px;
+  padding-left: 24px;
+}
+
+.spell-global-note {
+  color: #ffd700;
+  font-size: 0.9rem;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.spell-damage-fields {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.spell-damage-fields input {
+  flex: 2;
+}
+
+.spell-damage-type-select {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.spell-damage-type-select:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.1);
+}
+
+.spell-damage-type-select option {
+  background: #1a1a1a;
+  color: #ffffff;
 }
 
 .spell-saving-throw,
@@ -2183,16 +2355,45 @@ body {
 /* Spell Compact View */
 .spell-compact {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 215, 0, 0.1);
   border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.spell-compact.prepared {
+  border-color: rgba(40, 167, 69, 0.4);
+  background: rgba(40, 167, 69, 0.1);
+}
+
+.spell-compact.unprepared {
+  border-color: rgba(108, 117, 125, 0.3);
+  background: rgba(108, 117, 125, 0.05);
+}
+
+.spell-compact-main {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
 }
 
 .spell-compact:hover {
-  background: rgba(255, 215, 0, 0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.spell-compact.prepared:hover {
+  background: rgba(40, 167, 69, 0.15);
+}
+
+.spell-compact.unprepared:hover {
+  background: rgba(108, 117, 125, 0.1);
 }
 
 .spell-compact-info {
@@ -2231,7 +2432,7 @@ body {
 .spell-compact-details {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
+  align-items: center;
 }
 
 .spell-detail-badge {
@@ -2253,16 +2454,224 @@ body {
   border-color: rgba(220, 53, 69, 0.3);
 }
 
-.spell-compact-arrow {
-  color: #ffd700;
-  font-size: 1.2rem;
-  opacity: 0.6;
+.spell-detail-badge.ritual {
+  color: #ffc107;
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+/* Mini icone per vista compatta */
+.spell-mini-icons {
+  display: flex;
+  gap: 6px;
+  margin-left: 10px;
+  align-items: center;
+}
+
+.spell-mini-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1;
+}
+
+.spell-mini-icon.saving-throw {
+  background-color: rgba(156, 39, 176, 0.2);
+  color: #9c27b0;
+  border: 1px solid rgba(156, 39, 176, 0.3);
+}
+
+.spell-mini-icon.ritual {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+
+/* Vista espansa incantesimi */
+.spell-expanded {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.spell-compact:hover .spell-compact-arrow {
-  opacity: 1;
-  transform: translateX(3px);
+.spell-expanded:hover {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+.spell-expanded-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+  padding-bottom: 12px;
+}
+
+.spell-expanded-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.spell-expanded-name {
+  color: #ffd700;
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.spell-expanded-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-spell-button {
+  background: rgba(0, 123, 255, 0.2);
+  color: #007bff;
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-spell-button:hover {
+  background: rgba(0, 123, 255, 0.3);
+  border-color: rgba(0, 123, 255, 0.5);
+}
+
+
+.spell-expanded-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spell-expanded-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spell-expanded-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spell-detail-label {
+  font-weight: bold;
+  color: #cccccc;
+  min-width: 120px;
+}
+
+.spell-detail-value {
+  color: #ffd700;
+}
+
+.spell-expanded-description {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 12px;
+  border-left: 3px solid #ffd700;
+}
+
+.spell-description-title {
+  color: #ffd700;
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+.spell-description-text {
+  color: #cccccc;
+  margin: 0;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.spell-description-text.long-description {
+  font-size: 0.75rem;
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.4;
+  padding-right: 8px;
+}
+
+/* Scrollbar per descrizioni lunghe */
+.spell-description-text.long-description::-webkit-scrollbar {
+  width: 6px;
+}
+
+.spell-description-text.long-description::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.spell-description-text.long-description::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.3);
+  border-radius: 3px;
+}
+
+.spell-description-text.long-description::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.5);
+}
+
+/* Pulsante toggle preparato */
+.spell-prepared-toggle {
+  margin-left: 12px;
+}
+
+.prepared-toggle-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.prepared-toggle-btn.prepared {
+  border-color: #28a745;
+  color: #28a745;
+  background: rgba(40, 167, 69, 0.1);
+}
+
+.prepared-toggle-btn.unprepared {
+  border-color: #6c757d;
+  color: #6c757d;
+  background: rgba(108, 117, 125, 0.05);
+}
+
+.prepared-toggle-btn:hover {
+  transform: scale(1.1);
+}
+
+.prepared-toggle-btn.prepared:hover {
+  background: rgba(40, 167, 69, 0.2);
+  box-shadow: 0 0 8px rgba(40, 167, 69, 0.3);
+}
+
+.prepared-toggle-btn.unprepared:hover {
+  background: rgba(108, 117, 125, 0.1);
+  box-shadow: 0 0 8px rgba(108, 117, 125, 0.2);
 }
 
 .empty-spells {
@@ -2306,12 +2715,39 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
-.spell-count {
-  color: #888;
+
+.spell-level-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.add-level-spell-button {
+  background: linear-gradient(135deg, #ffd700, #ffed4e);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
   font-size: 0.9rem;
-  font-weight: 400;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 4px;
+}
+
+.add-level-spell-button:hover {
+  background: linear-gradient(135deg, #ffed4e, #ffd700);
+  transform: scale(1.1);
 }
 
 .spell-level-arrow {
@@ -2680,6 +3116,32 @@ body {
   }
 }
 
+.hp-breakdown {
+  font-size: 0.85rem;
+  font-weight: normal;
+  opacity: 0.8;
+  margin-left: 5px;
+}
+
+/* Sezione Classe Armatura centrata */
+.armor-class-section {
+  display: flex;
+  justify-content: center;
+  padding: 15px 0;
+}
+
+.armor-class-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: rgba(255, 215, 0, 0.05);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.1);
+}
+
 .combat-stat {
   display: flex;
   flex-direction: column;
@@ -2987,4 +3449,873 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #ffed4e;
+}
+
+/* Sezione Armi */
+.weapons-section {
+  padding: 15px 0;
+}
+
+.weapons-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+}
+
+.add-weapon-button {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-weapon-button:hover {
+  background: linear-gradient(135deg, #ffed4e 0%, #ffd700 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 215, 0, 0.3);
+}
+
+.weapons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.weapon-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.weapon-form {
+  margin-bottom: 10px;
+}
+
+.weapon-name-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.weapon-name-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.weapon-name-input:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.1);
+}
+
+.remove-weapon-button {
+  background: rgba(248, 113, 113, 0.2);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #f87171;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-weapon-button:hover {
+  background: rgba(248, 113, 113, 0.3);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.weapon-stats-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  align-items: center;
+}
+
+.weapon-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.weapon-stat label {
+  color: #cccccc;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.weapon-stat input[type="checkbox"] {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.weapon-stat label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.weapon-ability-select,
+.weapon-damage-input,
+.weapon-damage-type-select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.weapon-ability-select:focus,
+.weapon-damage-input:focus,
+.weapon-damage-type-select:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.1);
+}
+
+.weapon-display {
+  background: rgba(255, 215, 0, 0.05);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 6px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.weapon-display-text {
+  color: #ffd700;
+  font-size: 1rem;
+  font-family: 'Courier New', monospace;
+}
+
+/* Visualizzazione compatta delle armi */
+.weapon-compact-view {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.weapon-compact-view:hover {
+  background: rgba(255, 215, 0, 0.05);
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+.weapon-compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.weapon-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffd700;
+}
+
+.weapon-compact-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.weapon-edit-button {
+  background: rgba(255, 215, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 4px;
+  padding: 4px 6px;
+  color: #ffd700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.weapon-edit-button:hover {
+  background: rgba(255, 215, 0, 0.3);
+  border-color: rgba(255, 215, 0, 0.5);
+}
+
+.weapon-save-button {
+  background: rgba(74, 222, 128, 0.2);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #4ade80;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.weapon-save-button:hover {
+  background: rgba(74, 222, 128, 0.3);
+  border-color: rgba(74, 222, 128, 0.5);
+}
+
+.weapon-compact-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: #cccccc;
+}
+
+.weapon-hit-calc {
+  color: #4ade80;
+  font-weight: 500;
+}
+
+.weapon-damage-display {
+  color: #f87171;
+  font-weight: 500;
+}
+
+.weapon-ability-display {
+  color: #fbbf24;
+  font-weight: 500;
+}
+
+.no-weapons-message {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 20px;
+}
+
+/* Sezione Lingue */
+.languages-section {
+  padding: 15px 0;
+}
+
+.languages-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+}
+
+.add-language-button {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-language-button:hover {
+  background: linear-gradient(135deg, #ffed4e 0%, #ffd700 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 215, 0, 0.3);
+}
+
+.languages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.language-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.language-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+.language-input:focus {
+  outline: none;
+  border-color: #ffd700;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.1);
+}
+
+.remove-language-button {
+  background: rgba(248, 113, 113, 0.2);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 4px;
+  padding: 6px 8px;
+  color: #f87171;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.remove-language-button:hover {
+  background: rgba(248, 113, 113, 0.3);
+  border-color: rgba(248, 113, 113, 0.5);
+}
+
+.no-languages-message {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 20px;
+}
+
+/* Tooltip inline per testi lunghi */
+.full-text-tooltip {
+  position: relative;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  border: 2px solid #ffd700;
+  border-radius: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  animation: slideInTooltip 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.tooltip-content {
+  color: #ffffff;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-wrap: break-word;
+  word-break: break-word;
+  padding-right: 30px;
+}
+
+.tooltip-content strong {
+  color: #ffd700;
+}
+
+.close-tooltip-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #ffd700;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.close-tooltip-button:hover {
+  background: rgba(255, 215, 0, 0.2);
+  transform: scale(1.1);
+}
+
+@keyframes slideInTooltip {
+  from { 
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 200px;
+  }
+}
+
+/* Accordion Valute D&D */
+.currency-accordion {
+  margin-top: 20px;
+  border-top: 2px solid rgba(255, 215, 0, 0.2);
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.currency-accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%);
+  border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+}
+
+.currency-accordion-header:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.08) 100%);
+}
+
+.currency-accordion-title {
+  margin: 0;
+  color: #ffd700;
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.currency-total-preview {
+  font-size: 0.9rem;
+  color: #ffffff;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.currency-accordion-icon {
+  color: #ffd700;
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.currency-accordion-content {
+  padding: 20px;
+  animation: slideDown 0.3s ease;
+}
+
+.currency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.currency-item {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.1) 100%);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.currency-item:hover {
+  border-color: rgba(255, 215, 0, 0.4);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.currency-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.currency-icon {
+  font-size: 1.5rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  transition: transform 0.2s ease;
+}
+
+.currency-item:hover .currency-icon {
+  transform: scale(1.1);
+}
+
+.currency-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.currency-name {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+}
+
+.currency-abbr {
+  color: #ffd700;
+  font-size: 0.8rem;
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.currency-input {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-align: center;
+  width: 100%;
+  transition: all 0.2s ease;
+  -moz-appearance: textfield;
+}
+
+.currency-input::-webkit-outer-spin-button,
+.currency-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.currency-input:focus {
+  outline: none;
+  border-color: #ffd700;
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
+}
+
+.currency-input::placeholder {
+  color: #888;
+}
+
+.currency-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.05) 100%);
+  border: 2px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  margin-top: 16px;
+}
+
+.total-label {
+  color: #ffd700;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.total-value {
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 1.3rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    padding-top: 20px;
+    padding-bottom: 20px;
+  }
+}
+
+/* Responsive per armi */
+@media (max-width: 768px) {
+  .weapon-stats-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .weapon-name-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .remove-weapon-button {
+    align-self: flex-end;
+    width: fit-content;
+  }
+  
+  .weapon-compact-stats {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .weapon-compact-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .weapon-compact-actions {
+    align-self: flex-end;
+  }
+  
+  /* Responsive per lingue */
+  .language-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .remove-language-button {
+    align-self: flex-end;
+    width: fit-content;
+  }
+
+  /* Responsive per inventario */
+  .inventory-item {
+    gap: 8px;
+    padding: 10px;
+  }
+  
+  .quantity-input {
+    width: 50px;
+    font-size: 0.9rem;
+    padding: 5px 6px;
+  }
+  
+  .name-input {
+    font-size: clamp(0.75rem, 3.5vw, 0.9rem);
+    padding: 6px 10px;
+  }
+  
+  .remove-item-button {
+    padding: 4px 6px;
+    font-size: 0.8rem;
+  }
+  
+  /* Responsive per espansione testo */
+  .expand-indicator {
+    font-size: 0.7rem;
+    right: 6px;
+  }
+  
+  .name-input.expanded {
+    padding: 6px 10px;
+  }
+  
+  /* Responsive per tooltip */
+  .full-text-tooltip {
+    margin-top: 6px;
+    padding: 10px;
+  }
+  
+  .tooltip-content {
+    font-size: 0.8rem;
+    padding-right: 25px;
+  }
+  
+  .close-tooltip-button {
+    top: 6px;
+    right: 6px;
+    font-size: 0.9rem;
+  }
+  
+  /* Responsive per valute accordion */
+  .currency-accordion {
+    margin-top: 16px;
+  }
+  
+  .currency-accordion-header {
+    padding: 12px 16px;
+  }
+  
+  .currency-accordion-title {
+    font-size: 1.1rem;
+    gap: 6px;
+  }
+  
+  .currency-total-preview {
+    font-size: 0.8rem;
+  }
+  
+  .currency-accordion-content {
+    padding: 16px;
+  }
+  
+  .currency-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .currency-item {
+    padding: 10px;
+  }
+  
+  .currency-icon {
+    font-size: 1.3rem;
+  }
+  
+  .currency-name {
+    font-size: 0.85rem;
+  }
+  
+  .currency-abbr {
+    font-size: 0.75rem;
+  }
+  
+  .currency-input {
+    padding: 6px 10px;
+    font-size: 1rem;
+  }
+  
+  .currency-total {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 4px;
+    text-align: center;
+  }
+  
+  .total-label {
+    font-size: 1rem;
+  }
+  
+  .total-value {
+    font-size: 1.2rem;
+  }
+  
+  /* Responsive per incantesimi */
+  .global-spell-save-dc {
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+  
+  .save-dc-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .save-dc-label {
+    font-size: 1rem;
+  }
+  
+  .save-dc-value {
+    font-size: 1.2rem;
+    padding: 6px 12px;
+  }
+  
+  .save-dc-formula {
+    font-size: 0.8rem;
+  }
+  
+  .spell-optional-fields {
+    gap: 12px;
+  }
+  
+  .spell-option {
+    padding: 10px;
+  }
+  
+  .spell-checkbox-label {
+    font-size: 0.9rem;
+  }
+  
+  .spell-damage-fields {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .spell-damage-fields input,
+  .spell-damage-type-select {
+    flex: none;
+  }
+  
+  /* Responsive per toggle preparato */
+  .spell-prepared-toggle {
+    margin-left: 8px;
+  }
+  
+  .prepared-toggle-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+  }
+  
+  .spell-compact {
+    padding: 10px;
+  }
+  
+  .spell-compact-main {
+    gap: 8px;
+  }
+  
+  .spell-mini-icons {
+    gap: 5px;
+    margin-left: 8px;
+  }
+  
+  .spell-mini-icon {
+    width: 18px;
+    height: 18px;
+    font-size: 0.7rem;
+  }
+  
+  .spell-expanded {
+    padding: 12px;
+  }
+  
+  .spell-expanded-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .spell-expanded-title {
+    justify-content: center;
+    text-align: center;
+  }
+  
+  .spell-expanded-actions {
+    justify-content: center;
+  }
+  
+  .spell-detail-label {
+    min-width: 100px;
+    font-size: 0.9rem;
+  }
+  
+  .spell-expanded-detail {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .spell-description-text.long-description {
+    font-size: 0.7rem;
+    max-height: 100px;
+    line-height: 1.3;
+  }
+  
+  /* Header incantesimi responsive */
+  .spells-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    min-height: auto;
+  }
+  
+  .spells-header .card-title {
+    text-align: center;
+    height: auto;
+    margin-bottom: 8px;
+  }
+  
+  .add-spell-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Mini-bottoni livello responsive */
+  .add-level-spell-button {
+    width: 22px;
+    height: 22px;
+    font-size: 0.8rem;
+    margin-left: 2px;
+  }
+  
+  .spell-level-actions {
+    gap: 6px;
+  }
+  
+  .spell-level-title {
+    font-size: 1rem;
+  }
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { loadCharacters, saveCharacter } from '../utils/storage';
-import { calculateModifier, calculateSpellSaveDC } from '../types/character';
+import { calculateModifier, calculateSpellSaveDC, migrateCharacter, calculateWeaponHit } from '../types/character';
 
 const CharacterView = () => {
   const { id } = useParams();
@@ -10,10 +10,14 @@ const CharacterView = () => {
   const [loading, setLoading] = useState(true);
   const [openSections, setOpenSections] = useState({
     attributes: false,
-    skills: false
+    skills: false,
+    weapons: false,
+    languages: false
   });
+  const [currencyOpen, setCurrencyOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('sheet');
   const [editingSpell, setEditingSpell] = useState(null);
+  const [viewingSpell, setViewingSpell] = useState(null);
   const [editingSlot, setEditingSlot] = useState(null);
   const [editingAllSlots, setEditingAllSlots] = useState(false);
   const [tempSpell, setTempSpell] = useState(null);
@@ -24,12 +28,21 @@ const CharacterView = () => {
     0: true, 1: true, 2: true, 3: true, 4: true, 5: true, 6: true, 7: true, 8: true, 9: true
   });
   const [spellSlotsOpen, setSpellSlotsOpen] = useState(true);
+  const [editingWeapon, setEditingWeapon] = useState(null);
+  const [expandedItems, setExpandedItems] = useState(new Set());
+  const [showingTooltip, setShowingTooltip] = useState(null);
 
   useEffect(() => {
     const characters = loadCharacters();
     const foundCharacter = characters.find(c => c.id === id);
     if (foundCharacter) {
-      setCharacter(foundCharacter);
+      // Migra il personaggio esistente al nuovo formato
+      const migratedCharacter = migrateCharacter(foundCharacter);
+      setCharacter(migratedCharacter);
+      // Salva il personaggio migrato
+      if (JSON.stringify(migratedCharacter) !== JSON.stringify(foundCharacter)) {
+        saveCharacter(migratedCharacter);
+      }
     } else {
       navigate('/');
     }
@@ -70,22 +83,24 @@ const CharacterView = () => {
     });
   };
 
-  const handleCustomFieldChange = (fieldId, value) => {
+  const handleBaseStatChange = (statId, value) => {
     setCharacter(prev => {
       const updatedCharacter = {
         ...prev,
-        customFields: prev.customFields.map(field => 
-          field.id === fieldId ? { ...field, value: value.toString() } : field
-        ),
+        baseStats: {
+          ...prev.baseStats,
+          [statId]: value
+        },
         updatedAt: new Date().toISOString()
       };
       
-      // Salva automaticamente per tutti i campi custom
+      // Salva automaticamente per tutti i campi base
       saveCharacter(updatedCharacter);
       
       return updatedCharacter;
     });
   };
+
 
 
   const handleDamageTakenChange = (value) => {
@@ -106,6 +121,155 @@ const CharacterView = () => {
       ...prev,
       [section]: !prev[section]
     }));
+  };
+
+  const addWeapon = () => {
+    const newWeapon = {
+      id: `weapon_${Date.now()}`,
+      name: '',
+      damageDice: '',
+      damageType: '',
+      ability: 'strength', // default a Forza
+      isProficient: false
+    };
+    
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        weapons: [...(prev.weapons || []), newWeapon],
+        updatedAt: new Date().toISOString()
+      };
+      
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
+    
+    // Metti la nuova arma in modalità editing
+    setEditingWeapon(newWeapon.id);
+  };
+
+  const updateWeapon = (weaponId, field, value) => {
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        weapons: prev.weapons.map(weapon => 
+          weapon.id === weaponId ? { ...weapon, [field]: value } : weapon
+        ),
+        updatedAt: new Date().toISOString()
+      };
+      
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
+  };
+
+  const removeWeapon = (weaponId) => {
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        weapons: prev.weapons.filter(weapon => weapon.id !== weaponId),
+        updatedAt: new Date().toISOString()
+      };
+      
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
+  };
+
+  const addLanguage = () => {
+    const newLanguage = {
+      id: `language_${Date.now()}`,
+      name: ''
+    };
+    
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        languages: [...(prev.languages || []), newLanguage],
+        updatedAt: new Date().toISOString()
+      };
+      
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
+  };
+
+  const updateLanguage = (languageId, value) => {
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        languages: prev.languages.map(language => 
+          language.id === languageId ? { ...language, name: value } : language
+        ),
+        updatedAt: new Date().toISOString()
+      };
+      
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
+  };
+
+  const removeLanguage = (languageId) => {
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        languages: prev.languages.filter(language => language.id !== languageId),
+        updatedAt: new Date().toISOString()
+      };
+      
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
+  };
+
+  // Funzione per calcolare la dimensione ottimale del font basata sulla lunghezza del testo
+  const calculateOptimalFontSize = (text) => {
+    if (!text || text.length === 0) return 'clamp(0.8rem, 4vw, 1rem)';
+    
+    const baseSize = 1; // rem
+    const minSize = 0.7; // rem
+    const textLength = text.length;
+    
+    // Scala basata sulla lunghezza del testo
+    let scaleFactor = 1;
+    if (textLength > 30) {
+      scaleFactor = 0.7;
+    } else if (textLength > 20) {
+      scaleFactor = 0.8;
+    } else if (textLength > 15) {
+      scaleFactor = 0.9;
+    }
+    
+    const calculatedSize = Math.max(baseSize * scaleFactor, minSize);
+    
+    // Usa clamp per responsiveness con i nuovi valori
+    return `clamp(${calculatedSize * 0.7}rem, 4vw, ${calculatedSize}rem)`;
+  };
+
+  // Funzioni per gestire l'espansione del testo
+  const toggleItemExpansion = (itemId, itemName) => {
+    if (!itemName || itemName.length <= 15) return; // Non espandere testi corti
+    
+    const newExpandedItems = new Set(expandedItems);
+    
+    if (expandedItems.has(itemId)) {
+      newExpandedItems.delete(itemId);
+    } else {
+      newExpandedItems.add(itemId);
+    }
+    
+    setExpandedItems(newExpandedItems);
+  };
+
+  // Funzione per mostrare il tooltip inline mobile-friendly
+  const showFullText = (itemId, itemName) => {
+    if (itemName && itemName.length > 40) {
+      setShowingTooltip(itemId);
+      // Auto-hide dopo 3 secondi
+      setTimeout(() => {
+        setShowingTooltip(null);
+      }, 3000);
+    }
   };
 
 
@@ -134,6 +298,84 @@ const CharacterView = () => {
     wisdom: 'Saggezza',
     charisma: 'Carisma'
   };
+
+  const weaponDamageTypes = [
+    { value: '', label: 'Seleziona tipo' },
+    { value: 'slashing', label: 'Tagliente' },
+    { value: 'piercing', label: 'Perforante' },
+    { value: 'bludgeoning', label: 'Contundente' },
+    { value: 'acid', label: 'Acido' },
+    { value: 'cold', label: 'Freddo' },
+    { value: 'fire', label: 'Fuoco' },
+    { value: 'force', label: 'Forza' },
+    { value: 'lightning', label: 'Fulmine' },
+    { value: 'necrotic', label: 'Necrotico' },
+    { value: 'poison', label: 'Veleno' },
+    { value: 'psychic', label: 'Psichico' },
+    { value: 'radiant', label: 'Radiante' },
+    { value: 'thunder', label: 'Tuono' }
+  ];
+
+  const spellDamageTypes = [
+    { value: '', label: 'Nessuno/Altro' },
+    { value: 'acid', label: 'Acido' },
+    { value: 'cold', label: 'Freddo' },
+    { value: 'fire', label: 'Fuoco' },
+    { value: 'force', label: 'Forza' },
+    { value: 'lightning', label: 'Fulmine' },
+    { value: 'necrotic', label: 'Necrotico' },
+    { value: 'poison', label: 'Veleno' },
+    { value: 'psychic', label: 'Psichico' },
+    { value: 'radiant', label: 'Radiante' },
+    { value: 'thunder', label: 'Tuono' },
+    { value: 'bludgeoning', label: 'Contundente' },
+    { value: 'piercing', label: 'Perforante' },
+    { value: 'slashing', label: 'Tagliente' }
+  ];
+
+  // Dati delle valute D&D
+  const currencyTypes = [
+    { 
+      key: 'platinum', 
+      name: 'Platino', 
+      abbreviation: 'PP', 
+      icon: '⚪', 
+      color: '#E5E7EB',
+      value: 10 // rispetto all'oro
+    },
+    { 
+      key: 'gold', 
+      name: 'Oro', 
+      abbreviation: 'GP', 
+      icon: '🟡', 
+      color: '#FCD34D',
+      value: 1 // unità base
+    },
+    { 
+      key: 'electrum', 
+      name: 'Electrum', 
+      abbreviation: 'EP', 
+      icon: '🟠', 
+      color: '#F59E0B',
+      value: 0.5 // rispetto all'oro
+    },
+    { 
+      key: 'silver', 
+      name: 'Argento', 
+      abbreviation: 'SP', 
+      icon: '⚪', 
+      color: '#9CA3AF',
+      value: 0.1 // rispetto all'oro
+    },
+    { 
+      key: 'copper', 
+      name: 'Rame', 
+      abbreviation: 'CP', 
+      icon: '🟤', 
+      color: '#92400E',
+      value: 0.01 // rispetto all'oro
+    }
+  ];
 
   // Funzioni per gestire l'inventario
   const addInventoryItem = () => {
@@ -180,16 +422,56 @@ const CharacterView = () => {
     });
   };
 
+  // Funzioni per gestire le valute
+  const updateCurrency = (currencyType, value) => {
+    // Se il valore è vuoto, mantienilo vuoto
+    let processedValue = value;
+    if (value === '') {
+      processedValue = '';
+    } else {
+      const numericValue = parseInt(value) || 0;
+      processedValue = Math.max(0, numericValue).toString(); // Previene valori negativi
+    }
+    
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        currency: {
+          ...prev.currency,
+          [currencyType]: processedValue
+        },
+        updatedAt: new Date().toISOString()
+      };
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
+  };
+
+  // Calcola il valore totale in oro
+  const calculateTotalGoldValue = () => {
+    if (!character.currency) return 0;
+    
+    return currencyTypes.reduce((total, currency) => {
+      const amountStr = character.currency[currency.key] || '';
+      const amount = amountStr === '' ? 0 : parseInt(amountStr) || 0;
+      return total + (amount * currency.value);
+    }, 0);
+  };
+
   // Funzioni per gestire gli incantesimi
-  const addSpell = () => {
-    const spellSaveDC = calculateSpellSaveDC(character);
+  const addSpell = (specificLevel = null) => {
     const newSpell = {
       id: Date.now().toString(),
       name: '',
       description: '',
-      savingThrow: spellSaveDC.toString(),
+      hasSavingThrow: false,
+      savingThrow: '',
+      hasDamage: false,
       damage: '',
-      level: 0
+      damageType: '',
+      level: specificLevel !== null ? specificLevel : '',
+      isRitual: false,
+      isPrepared: false
     };
     
     // Crea l'incantesimo temporaneo e apri la modalità edit
@@ -236,10 +518,16 @@ const CharacterView = () => {
   const saveSpell = (spellId) => {
     // Se è un incantesimo temporaneo, aggiungilo alla lista
     if (tempSpell && tempSpell.id === spellId) {
+      // Applica i valori di default prima del salvataggio
+      const processedSpell = {
+        ...tempSpell,
+        level: tempSpell.level === '' ? 1 : parseInt(tempSpell.level) || 1
+      };
+      
       setCharacter(prev => {
         const updatedCharacter = {
           ...prev,
-          spells: [...(prev.spells || []), tempSpell],
+          spells: [...(prev.spells || []), processedSpell],
           updatedAt: new Date().toISOString()
         };
         saveCharacter(updatedCharacter);
@@ -248,6 +536,24 @@ const CharacterView = () => {
       
       // Pulisci lo stato temporaneo
       setTempSpell(null);
+    } else {
+      // È un incantesimo esistente in modifica, applica i valori di default
+      setCharacter(prev => {
+        const updatedCharacter = {
+          ...prev,
+          spells: prev.spells.map(spell => 
+            spell.id === spellId 
+              ? {
+                  ...spell,
+                  level: spell.level === '' ? 1 : parseInt(spell.level) || 1
+                }
+              : spell
+          ),
+          updatedAt: new Date().toISOString()
+        };
+        saveCharacter(updatedCharacter);
+        return updatedCharacter;
+      });
     }
     
     setEditingSpell(null);
@@ -255,6 +561,16 @@ const CharacterView = () => {
 
   const openSpellEdit = (spellId) => {
     setEditingSpell(spellId);
+    setViewingSpell(null); // Chiudi vista espansa se aperta
+  };
+
+  const openSpellView = (spellId) => {
+    setViewingSpell(spellId);
+    setEditingSpell(null); // Chiudi edit se aperto
+  };
+
+  const closeSpellView = () => {
+    setViewingSpell(null);
   };
 
   const toggleSpellSection = (level) => {
@@ -262,6 +578,20 @@ const CharacterView = () => {
       ...prev,
       [level]: !prev[level]
     }));
+  };
+
+  const toggleSpellPrepared = (spellId, currentState) => {
+    setCharacter(prev => {
+      const updatedCharacter = {
+        ...prev,
+        spells: prev.spells.map(spell => 
+          spell.id === spellId ? { ...spell, isPrepared: !currentState } : spell
+        ),
+        updatedAt: new Date().toISOString()
+      };
+      saveCharacter(updatedCharacter);
+      return updatedCharacter;
+    });
   };
 
   // Funzioni per gestire gli slot incantesimi
@@ -457,30 +787,20 @@ const CharacterView = () => {
           </div>
         </section>
 
-        {/* Core Combat Stats */}
+        {/* Statistiche di Combattimento */}
         <section className="stats-card">
           <h3 className="card-title">Statistiche di Combattimento</h3>
-          <div className="combat-stats">
-            <div className="combat-stat">
+          
+          {/* Classe Armatura - Centrata sopra il box HP */}
+          <div className="armor-class-section">
+            <div className="armor-class-stat">
               <span className="stat-label">Classe Armatura</span>
               <input
                 type="number"
-                value={character.customFields.find(f => f.id === 'armorClass')?.value || ''}
-                onChange={(e) => handleCustomFieldChange('armorClass', e.target.value)}
+                value={character.baseStats?.armorClass || ''}
+                onChange={(e) => handleBaseStatChange('armorClass', e.target.value)}
                 className="stat-input-large"
-                placeholder="AC"
-              />
-            </div>
-            <div className="combat-stat">
-              <span className="stat-label">Velocità</span>
-              <input
-                type="number"
-                value={character.customFields.find(f => f.id === 'speed')?.value || ''}
-                onChange={(e) => handleCustomFieldChange('speed', e.target.value)}
-                className="stat-input-large"
-                placeholder="30"
-                min="0"
-                max="120"
+                placeholder="10"
               />
             </div>
           </div>
@@ -491,11 +811,32 @@ const CharacterView = () => {
               <span className="stat-label">Punti Ferita</span>
               <input
                 type="number"
-                value={character.customFields.find(f => f.id === 'hitPoints')?.value || ''}
-                onChange={(e) => handleCustomFieldChange('hitPoints', e.target.value)}
+                value={character.baseStats?.hitPoints || ''}
+                onChange={(e) => handleBaseStatChange('hitPoints', e.target.value)}
                 className="hp-input"
-                placeholder="HP"
+                placeholder="0"
                 min="0"
+              />
+            </div>
+            <div className="hp-stat">
+              <span className="stat-label">HP Temporanei</span>
+              <input
+                type="number"
+                value={character.baseStats?.tempHitPoints || ''}
+                onChange={(e) => handleBaseStatChange('tempHitPoints', e.target.value)}
+                className="hp-input"
+                placeholder="0"
+                min="0"
+              />
+            </div>
+            <div className="hp-stat">
+              <span className="stat-label">Velocità</span>
+              <input
+                type="text"
+                value={character.baseStats?.speed || ''}
+                onChange={(e) => handleBaseStatChange('speed', e.target.value)}
+                className="hp-input"
+                placeholder="9 metri"
               />
             </div>
             <div className="damage-stat">
@@ -514,22 +855,202 @@ const CharacterView = () => {
           
           {/* HP Attuali Calcolati */}
           {(() => {
-            const maxHP = parseInt(character.customFields.find(f => f.id === 'hitPoints')?.value) || 0;
+            const maxHP = parseInt(character.baseStats?.hitPoints) || 0;
+            const tempHP = parseInt(character.baseStats?.tempHitPoints) || 0;
             const damageTaken = parseInt(character.damageTaken) || 0;
-            const currentHP = Math.max(0, maxHP - damageTaken);
             
-            if (maxHP > 0) {
+            // Calcola HP rimanenti con logica: prima si consumano gli HP temporanei
+            let remainingTempHP = Math.max(0, tempHP - damageTaken);
+            let remainingRegularHP = maxHP;
+            
+            if (damageTaken > tempHP) {
+              // Se i danni superano gli HP temporanei, intacca quelli normali
+              remainingRegularHP = Math.max(0, maxHP - (damageTaken - tempHP));
+              remainingTempHP = 0;
+            }
+            
+            const totalCurrentHP = remainingRegularHP + remainingTempHP;
+            const totalMaxHP = maxHP + tempHP;
+            
+            if (maxHP > 0 || tempHP > 0) {
               return (
                 <div className="current-hp">
                   <span className="current-hp-label">HP Attuali</span>
-                  <span className={`current-hp-value ${currentHP <= maxHP * 0.25 ? 'critical' : currentHP <= maxHP * 0.5 ? 'low' : 'healthy'}`}>
-                    {currentHP} / {maxHP}
+                  <span className={`current-hp-value ${totalCurrentHP <= totalMaxHP * 0.25 ? 'critical' : totalCurrentHP <= totalMaxHP * 0.5 ? 'low' : 'healthy'}`}>
+                    {totalCurrentHP} / {totalMaxHP}
+                    {tempHP > 0 && (
+                      <span className="hp-breakdown">
+                        {' '}({remainingRegularHP}
+                        {remainingTempHP > 0 && ` + ${remainingTempHP} temp`})
+                      </span>
+                    )}
                   </span>
                 </div>
               );
             }
             return null;
           })()}
+        </section>
+
+        {/* Armi */}
+        <section className="stats-card accordion-section">
+          <div className="accordion-header" onClick={() => toggleSection('weapons')}>
+            <h3 className="card-title">Armi</h3>
+            <span className="accordion-icon">{openSections.weapons ? '▼' : '▶'}</span>
+          </div>
+          {openSections.weapons && (
+            <div className="accordion-content">
+              <div className="weapons-section">
+                <div className="weapons-header">
+                  <button className="add-weapon-button" onClick={addWeapon}>
+                    + Aggiungi Arma
+                  </button>
+                </div>
+                
+                <div className="weapons-list">
+                  {character.weapons && character.weapons.length > 0 ? (
+                    character.weapons.map((weapon) => (
+                      <div key={weapon.id} className="weapon-item">
+                        {editingWeapon === weapon.id ? (
+                          // Modalità editing (espansa)
+                          <div className="weapon-edit-form">
+                            <div className="weapon-name-section">
+                              <input
+                                type="text"
+                                value={weapon.name}
+                                onChange={(e) => updateWeapon(weapon.id, 'name', e.target.value)}
+                                placeholder="Nome arma"
+                                className="weapon-name-input"
+                              />
+                              <button 
+                                className="weapon-save-button"
+                                onClick={() => setEditingWeapon(null)}
+                              >
+                                ✓
+                              </button>
+                              <button 
+                                className="remove-weapon-button"
+                                onClick={() => removeWeapon(weapon.id)}
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                            
+                            <div className="weapon-stats-section">
+                              <div className="weapon-stat">
+                                <label>Caratteristica:</label>
+                                <select
+                                  value={weapon.ability}
+                                  onChange={(e) => updateWeapon(weapon.id, 'ability', e.target.value)}
+                                  className="weapon-ability-select"
+                                >
+                                  <option value="strength">Forza</option>
+                                  <option value="dexterity">Destrezza</option>
+                                </select>
+                              </div>
+                              
+                              <div className="weapon-stat">
+                                <label>
+                                  <input
+                                    type="checkbox"
+                                    checked={weapon.isProficient}
+                                    onChange={(e) => updateWeapon(weapon.id, 'isProficient', e.target.checked)}
+                                  />
+                                  Competente
+                                </label>
+                              </div>
+                              
+                              <div className="weapon-stat">
+                                <label>Dadi Danno:</label>
+                                <input
+                                  type="text"
+                                  value={weapon.damageDice || weapon.damage?.split(' ')[0] || ''}
+                                  onChange={(e) => updateWeapon(weapon.id, 'damageDice', e.target.value)}
+                                  placeholder="es. 1d8"
+                                  className="weapon-damage-input"
+                                />
+                              </div>
+                              
+                              <div className="weapon-stat">
+                                <label>Tipo Danno:</label>
+                                <select
+                                  value={weapon.damageType || (weapon.damage?.includes(' ') ? weapon.damage.split(' ').slice(1).join(' ') : '')}
+                                  onChange={(e) => updateWeapon(weapon.id, 'damageType', e.target.value)}
+                                  className="weapon-damage-type-select"
+                                >
+                                  {weaponDamageTypes.map(type => (
+                                    <option key={type.value} value={type.value}>
+                                      {type.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          // Modalità visualizzazione (compatta)
+                          <div className="weapon-compact-view" onClick={() => setEditingWeapon(weapon.id)}>
+                            <div className="weapon-compact-header">
+                              <span className="weapon-name">{weapon.name || 'Arma senza nome'}</span>
+                              <div className="weapon-compact-actions">
+                                <button 
+                                  className="weapon-edit-button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingWeapon(weapon.id);
+                                  }}
+                                >
+                                  ✏️
+                                </button>
+                                <button 
+                                  className="remove-weapon-button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeWeapon(weapon.id);
+                                  }}
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </div>
+                            <div className="weapon-compact-stats">
+                              <span className="weapon-hit-calc">
+                                Tiro: 1d20 {calculateWeaponHit(character, weapon)}
+                              </span>
+                              <span className="weapon-damage-display">
+                                Danno: {(() => {
+                                  // Usa i nuovi campi separati o fallback al vecchio formato
+                                  const diceRoll = weapon.damageDice || weapon.damage?.split(' ')[0] || '';
+                                  const damageType = weapon.damageType || 
+                                    (weapon.damage?.includes(' ') ? weapon.damage.split(' ').slice(1).join(' ') : '');
+                                  
+                                  if (!diceRoll) return 'non specificato';
+                                  
+                                  // Calcola il modificatore
+                                  const statValue = character.stats[weapon.ability] || 10;
+                                  const abilityModifier = calculateModifier(statValue);
+                                  const modifierStr = abilityModifier >= 0 ? `+${abilityModifier}` : `${abilityModifier}`;
+                                  
+                                  // Trova il label del tipo di danno
+                                  const damageTypeLabel = damageTypes.find(type => type.value === damageType)?.label || damageType;
+                                  
+                                  return `${diceRoll} ${modifierStr}${damageTypeLabel ? ` ${damageTypeLabel.toLowerCase()}` : ''}`;
+                                })()}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-weapons-message">
+                      Nessuna arma aggiunta. Clicca "Aggiungi Arma" per iniziare.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Attribute Scores - Sempre modificabili */}
@@ -666,6 +1187,51 @@ const CharacterView = () => {
           )}
         </section>
 
+        {/* Lingue */}
+        <section className="stats-card accordion-section">
+          <div className="accordion-header" onClick={() => toggleSection('languages')}>
+            <h3 className="card-title">Lingue</h3>
+            <span className="accordion-icon">{openSections.languages ? '▼' : '▶'}</span>
+          </div>
+          {openSections.languages && (
+            <div className="accordion-content">
+              <div className="languages-section">
+                <div className="languages-header">
+                  <button className="add-language-button" onClick={addLanguage}>
+                    + Aggiungi Lingua
+                  </button>
+                </div>
+                
+                <div className="languages-list">
+                  {character.languages && character.languages.length > 0 ? (
+                    character.languages.map((language) => (
+                      <div key={language.id} className="language-item">
+                        <input
+                          type="text"
+                          value={language.name}
+                          onChange={(e) => updateLanguage(language.id, e.target.value)}
+                          placeholder="Nome della lingua"
+                          className="language-input"
+                        />
+                        <button 
+                          className="remove-language-button"
+                          onClick={() => removeLanguage(language.id)}
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-languages-message">
+                      Nessuna lingua aggiunta. Clicca "Aggiungi Lingua" per iniziare.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
           </>
         )}
       </div>
@@ -684,33 +1250,70 @@ const CharacterView = () => {
             <div className="inventory-list">
               {character.equipment && character.equipment.length > 0 ? (
                 character.equipment.map((item) => (
-                  <div key={item.id} className="inventory-item">
-                    <div className="item-quantity">
-                      <input
-                        type="number"
-                        value={item.quantity || 1}
-                        onChange={(e) => updateInventoryItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
-                        className="quantity-input"
-                        min="1"
-                        max="999"
-                      />
+                  <div key={item.id}>
+                    <div className="inventory-item">
+                      <div className="item-quantity">
+                        <input
+                          type="number"
+                          value={item.quantity || 1}
+                          onChange={(e) => updateInventoryItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                          className="quantity-input"
+                          min="1"
+                          max="999"
+                        />
+                      </div>
+                      <div className="item-name">
+                        <input
+                          type="text"
+                          value={item.name || ''}
+                          onChange={(e) => updateInventoryItem(item.id, 'name', e.target.value)}
+                          onClick={() => {
+                            if (item.name && item.name.length > 40) {
+                              showFullText(item.id, item.name);
+                            } else {
+                              toggleItemExpansion(item.id, item.name);
+                            }
+                          }}
+                          className={`name-input ${expandedItems.has(item.id) ? 'expanded' : ''} ${item.name && item.name.length > 15 ? 'clickable' : ''}`}
+                          placeholder="Nome oggetto"
+                          title={item.name && item.name.length > 15 ? (item.name.length > 40 ? 'Clicca per vedere tutto' : 'Clicca per espandere') : ''}
+                          style={{
+                            fontSize: expandedItems.has(item.id) ? 'clamp(0.8rem, 4vw, 1rem)' : calculateOptimalFontSize(item.name || ''),
+                            whiteSpace: expandedItems.has(item.id) ? 'normal' : 'nowrap',
+                            overflow: expandedItems.has(item.id) ? 'visible' : 'hidden',
+                            textOverflow: expandedItems.has(item.id) ? 'clip' : 'ellipsis',
+                            height: expandedItems.has(item.id) ? 'auto' : '40px',
+                            minHeight: '40px'
+                          }}
+                        />
+                        {item.name && item.name.length > 15 && (
+                          <div className="expand-indicator">
+                            {item.name.length > 40 ? '👁️' : expandedItems.has(item.id) ? '▲' : '▼'}
+                          </div>
+                        )}
+                      </div>
+                      <button 
+                        className="remove-item-button"
+                        onClick={() => removeInventoryItem(item.id)}
+                        title="Rimuovi oggetto"
+                      >
+                        🗑️
+                      </button>
                     </div>
-                    <div className="item-name">
-                      <input
-                        type="text"
-                        value={item.name || ''}
-                        onChange={(e) => updateInventoryItem(item.id, 'name', e.target.value)}
-                        className="name-input"
-                        placeholder="Nome oggetto"
-                      />
-                    </div>
-                    <button 
-                      className="remove-item-button"
-                      onClick={() => removeInventoryItem(item.id)}
-                      title="Rimuovi oggetto"
-                    >
-                      🗑️
-                    </button>
+                    {showingTooltip === item.id && item.name && item.name.length > 40 && (
+                      <div className="full-text-tooltip">
+                        <div className="tooltip-content">
+                          <strong>Nome completo:</strong><br />
+                          {item.name}
+                        </div>
+                        <button 
+                          className="close-tooltip-button"
+                          onClick={() => setShowingTooltip(null)}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
@@ -719,6 +1322,65 @@ const CharacterView = () => {
                   <p style={{ fontSize: '0.9rem', color: '#888' }}>
                     Clicca "Aggiungi Oggetto" per iniziare
                   </p>
+                </div>
+              )}
+            </div>
+            
+            {/* Sezione Valute - Accordion */}
+            <div className="currency-accordion">
+              <div className="currency-accordion-header" onClick={() => setCurrencyOpen(!currencyOpen)}>
+                <h4 className="currency-accordion-title">
+                  💰 Valute
+                  <span className="currency-total-preview">
+                    ({(() => {
+                      const total = calculateTotalGoldValue();
+                      return total > 0 ? `${total.toFixed(2)} GP` : '0 GP';
+                    })()})
+                  </span>
+                </h4>
+                <span className="currency-accordion-icon">{currencyOpen ? '▼' : '▶'}</span>
+              </div>
+              
+              {currencyOpen && (
+                <div className="currency-accordion-content">
+                  <div className="currency-grid">
+                    {currencyTypes.map((currency) => (
+                      <div key={currency.key} className="currency-item">
+                        <div className="currency-header">
+                          <span 
+                            className="currency-icon"
+                            style={{ color: currency.color }}
+                          >
+                            {currency.icon}
+                          </span>
+                          <div className="currency-info">
+                            <span className="currency-name">{currency.name}</span>
+                            <span className="currency-abbr">({currency.abbreviation})</span>
+                          </div>
+                        </div>
+                        <input
+                          type="number"
+                          value={character.currency?.[currency.key] || ''}
+                          onChange={(e) => updateCurrency(currency.key, e.target.value)}
+                          className="currency-input"
+                          min="0"
+                          max="999999"
+                          placeholder="0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Riepilogo valore totale */}
+                  <div className="currency-total">
+                    <span className="total-label">Valore totale:</span>
+                    <span className="total-value">
+                      {(() => {
+                        const total = calculateTotalGoldValue();
+                        return total > 0 ? `${total.toFixed(2)} GP` : '0 GP';
+                      })()}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
@@ -734,6 +1396,17 @@ const CharacterView = () => {
               <button className="add-spell-button" onClick={addSpell}>
                 + Aggiungi Incantesimo
               </button>
+            </div>
+            
+            {/* Tiro Salvezza Globale */}
+            <div className="global-spell-save-dc">
+              <div className="save-dc-container">
+                <span className="save-dc-label">🎯 Tiro Salvezza Incantesimi:</span>
+                <span className="save-dc-value">{calculateSpellSaveDC(character)}</span>
+              </div>
+              <div className="save-dc-formula">
+                8 + bonus competenza + mod. caratteristica da incantatore
+              </div>
             </div>
             
             {/* Slot Incantesimi */}
@@ -847,36 +1520,96 @@ const CharacterView = () => {
                       <label className="spell-label">Livello:</label>
                       <input
                         type="number"
-                        value={tempSpell.level || 0}
-                        onChange={(e) => updateSpell(editingSpell, 'level', parseInt(e.target.value) || 0)}
+                        value={tempSpell.level || ''}
+                        onChange={(e) => updateSpell(editingSpell, 'level', e.target.value)}
                         className="spell-level-input"
                         min="0"
                         max="9"
+                        placeholder="1"
                       />
                     </div>
                   </div>
                   
                   <div className="spell-details">
-                    <div className="spell-saving-throw">
-                      <label className="spell-label">Tiro Salvezza:</label>
-                      <input
-                        type="number"
-                        value={tempSpell.savingThrow || calculateSpellSaveDC(character)}
-                        onChange={(e) => updateSpell(editingSpell, 'savingThrow', e.target.value)}
-                        className="spell-detail-input"
-                        min="1"
-                        max="30"
-                      />
-                    </div>
-                    <div className="spell-damage">
-                      <label className="spell-label">Danni:</label>
-                      <input
-                        type="text"
-                        value={tempSpell.damage || ''}
-                        onChange={(e) => updateSpell(editingSpell, 'damage', e.target.value)}
-                        className="spell-detail-input"
-                        placeholder="es. 1d6+3"
-                      />
+                    <div className="spell-optional-fields">
+                      <div className="spell-option">
+                        <label className="spell-checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={tempSpell.hasSavingThrow || false}
+                            onChange={(e) => updateSpell(editingSpell, 'hasSavingThrow', e.target.checked)}
+                            className="spell-checkbox"
+                          />
+                          Ha Tiro Salvezza
+                        </label>
+                        {tempSpell.hasSavingThrow && (
+                          <div className="spell-conditional-field">
+                            <span className="spell-global-note">
+                              (Usa valore globale: {calculateSpellSaveDC(character)})
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="spell-option">
+                        <label className="spell-checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={tempSpell.hasDamage || false}
+                            onChange={(e) => updateSpell(editingSpell, 'hasDamage', e.target.checked)}
+                            className="spell-checkbox"
+                          />
+                          Ha Danni
+                        </label>
+                        {tempSpell.hasDamage && (
+                          <div className="spell-conditional-field">
+                            <div className="spell-damage-fields">
+                              <input
+                                type="text"
+                                value={tempSpell.damage || ''}
+                                onChange={(e) => updateSpell(editingSpell, 'damage', e.target.value)}
+                                className="spell-detail-input"
+                                placeholder="es. 1d6+3, 2d8"
+                              />
+                              <select
+                                value={tempSpell.damageType || ''}
+                                onChange={(e) => updateSpell(editingSpell, 'damageType', e.target.value)}
+                                className="spell-damage-type-select"
+                              >
+                                {spellDamageTypes.map(type => (
+                                  <option key={type.value} value={type.value}>
+                                    {type.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="spell-option">
+                        <label className="spell-checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={tempSpell.isRitual || false}
+                            onChange={(e) => updateSpell(editingSpell, 'isRitual', e.target.checked)}
+                            className="spell-checkbox"
+                          />
+                          Può essere lanciato come Rituale
+                        </label>
+                      </div>
+                      
+                      <div className="spell-option">
+                        <label className="spell-checkbox-label">
+                          <input
+                            type="checkbox"
+                            checked={tempSpell.isPrepared || false}
+                            onChange={(e) => updateSpell(editingSpell, 'isPrepared', e.target.checked)}
+                            className="spell-checkbox"
+                          />
+                          Incantesimo Preparato
+                        </label>
+                      </div>
                     </div>
                   </div>
                   
@@ -939,10 +1672,21 @@ const CharacterView = () => {
                         >
                           <h4 className="spell-level-title">
                             {levelNum === 0 ? 'Trucchetti' : `Incantesimi di ${levelNum}° Livello`}
-                            <span className="spell-count">({spells.length})</span>
                           </h4>
-                          <div className={`spell-level-arrow ${isOpen ? 'open' : ''}`}>
-                            ▼
+                          <div className="spell-level-actions">
+                            <button 
+                              className="add-level-spell-button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addSpell(levelNum);
+                              }}
+                              title={`Aggiungi ${levelNum === 0 ? 'trucchetto' : `incantesimo di ${levelNum}° livello`}`}
+                            >
+                              +
+                            </button>
+                            <div className={`spell-level-arrow ${isOpen ? 'open' : ''}`}>
+                              ▼
+                            </div>
                           </div>
                         </div>
                         
@@ -967,35 +1711,96 @@ const CharacterView = () => {
                                         <label className="spell-label">Livello:</label>
                                         <input
                                           type="number"
-                                          value={spell.level || 0}
-                                          onChange={(e) => updateSpell(spell.id, 'level', parseInt(e.target.value) || 0)}
+                                          value={spell.level || ''}
+                                          onChange={(e) => updateSpell(spell.id, 'level', e.target.value)}
                                           className="spell-level-input"
                                           min="0"
                                           max="9"
+                                          placeholder="1"
                                         />
                                       </div>
                                     </div>
                                     
                                     <div className="spell-details">
-                                      <div className="spell-saving-throw">
-                                        <label className="spell-label">Tiro Salvezza:</label>
-                                        <input
-                                          type="text"
-                                          value={spell.savingThrow || ''}
-                                          onChange={(e) => updateSpell(spell.id, 'savingThrow', e.target.value)}
-                                          className="spell-detail-input"
-                                          placeholder="es. Destrezza CD 15"
-                                        />
-                                      </div>
-                                      <div className="spell-damage">
-                                        <label className="spell-label">Danni:</label>
-                                        <input
-                                          type="text"
-                                          value={spell.damage || ''}
-                                          onChange={(e) => updateSpell(spell.id, 'damage', e.target.value)}
-                                          className="spell-detail-input"
-                                          placeholder="es. 2d6+3"
-                                        />
+                                      <div className="spell-optional-fields">
+                                        <div className="spell-option">
+                                          <label className="spell-checkbox-label">
+                                            <input
+                                              type="checkbox"
+                                              checked={spell.hasSavingThrow || false}
+                                              onChange={(e) => updateSpell(spell.id, 'hasSavingThrow', e.target.checked)}
+                                              className="spell-checkbox"
+                                            />
+                                            Ha Tiro Salvezza
+                                          </label>
+                                          {spell.hasSavingThrow && (
+                                            <div className="spell-conditional-field">
+                                              <span className="spell-global-note">
+                                                (Usa valore globale: {calculateSpellSaveDC(character)})
+                                              </span>
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        <div className="spell-option">
+                                          <label className="spell-checkbox-label">
+                                            <input
+                                              type="checkbox"
+                                              checked={spell.hasDamage || false}
+                                              onChange={(e) => updateSpell(spell.id, 'hasDamage', e.target.checked)}
+                                              className="spell-checkbox"
+                                            />
+                                            Ha Danni
+                                          </label>
+                                          {spell.hasDamage && (
+                                            <div className="spell-conditional-field">
+                                              <div className="spell-damage-fields">
+                                                <input
+                                                  type="text"
+                                                  value={spell.damage || ''}
+                                                  onChange={(e) => updateSpell(spell.id, 'damage', e.target.value)}
+                                                  className="spell-detail-input"
+                                                  placeholder="es. 1d6+3, 2d8"
+                                                />
+                                                <select
+                                                  value={spell.damageType || ''}
+                                                  onChange={(e) => updateSpell(spell.id, 'damageType', e.target.value)}
+                                                  className="spell-damage-type-select"
+                                                >
+                                                  {spellDamageTypes.map(type => (
+                                                    <option key={type.value} value={type.value}>
+                                                      {type.label}
+                                                    </option>
+                                                  ))}
+                                                </select>
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        <div className="spell-option">
+                                          <label className="spell-checkbox-label">
+                                            <input
+                                              type="checkbox"
+                                              checked={spell.isRitual || false}
+                                              onChange={(e) => updateSpell(spell.id, 'isRitual', e.target.checked)}
+                                              className="spell-checkbox"
+                                            />
+                                            Può essere lanciato come Rituale
+                                          </label>
+                                        </div>
+                                        
+                                        <div className="spell-option">
+                                          <label className="spell-checkbox-label">
+                                            <input
+                                              type="checkbox"
+                                              checked={spell.isPrepared || false}
+                                              onChange={(e) => updateSpell(spell.id, 'isPrepared', e.target.checked)}
+                                              className="spell-checkbox"
+                                            />
+                                            Incantesimo Preparato
+                                          </label>
+                                        </div>
                                       </div>
                                     </div>
                                     
@@ -1026,33 +1831,114 @@ const CharacterView = () => {
                                       </button>
                                     </div>
                                   </>
-                                ) : (
-                                  // Vista compatta
-                                  <div 
-                                    className="spell-compact"
-                                    onClick={() => openSpellEdit(spell.id)}
-                                  >
-                                    <div className="spell-compact-info">
-                                      <div className="spell-compact-name">
-                                        <span className="spell-name-text">{spell.name || 'Incantesimo Senza Nome'}</span>
+                                ) : viewingSpell === spell.id ? (
+                                  // Vista espansa (solo lettura)
+                                  <div className="spell-expanded" onClick={closeSpellView}>
+                                    <div className="spell-expanded-header">
+                                      <div className="spell-expanded-title">
+                                        <h4 className="spell-expanded-name">{spell.name || 'Incantesimo Senza Nome'}</h4>
                                         <span className={`spell-level-badge ${spell.level === 0 ? 'cantrip' : ''}`}>
-                                          {spell.level === 0 ? 'Trucchetto' : `Liv. ${spell.level}`}
+                                          {spell.level === 0 ? 'Trucchetto' : `Livello ${spell.level}`}
                                         </span>
                                       </div>
-                                      <div className="spell-compact-details">
-                                        {spell.savingThrow && (
-                                          <span className="spell-detail-badge saving-throw">
-                                            🎯 {spell.savingThrow}
-                                          </span>
-                                        )}
-                                        {spell.damage && (
-                                          <span className="spell-detail-badge damage">
-                                            ⚔️ {spell.damage}
-                                          </span>
-                                        )}
+                                      <div className="spell-expanded-actions">
+                                        <button 
+                                          className="edit-spell-button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openSpellEdit(spell.id);
+                                          }}
+                                          title="Modifica incantesimo"
+                                        >
+                                          ✏️ Modifica
+                                        </button>
                                       </div>
                                     </div>
-                                    <div className="spell-compact-arrow">→</div>
+                                    
+                                    <div className="spell-expanded-content">
+                                      <div className="spell-expanded-details">
+                                        {spell.hasSavingThrow && (
+                                          <div className="spell-expanded-detail">
+                                            <span className="spell-detail-label">🎯 Tiro Salvezza:</span>
+                                            <span className="spell-detail-value">CD {calculateSpellSaveDC(character)}</span>
+                                          </div>
+                                        )}
+                                        {spell.hasDamage && spell.damage && (
+                                          <div className="spell-expanded-detail">
+                                            <span className="spell-detail-label">⚔️ Danni:</span>
+                                            <span className="spell-detail-value">
+                                              {spell.damage}
+                                              {spell.damageType && spellDamageTypes.find(t => t.value === spell.damageType)?.label && 
+                                                ` ${spellDamageTypes.find(t => t.value === spell.damageType).label.toLowerCase()}`
+                                              }
+                                            </span>
+                                          </div>
+                                        )}
+                                        {spell.isRitual && (
+                                          <div className="spell-expanded-detail">
+                                            <span className="spell-detail-label">🕯️ Rituale:</span>
+                                            <span className="spell-detail-value">Può essere lanciato come rituale</span>
+                                          </div>
+                                        )}
+                                        <div className="spell-expanded-detail">
+                                          <span className="spell-detail-label">📋 Preparato:</span>
+                                          <span className="spell-detail-value">{spell.isPrepared ? 'Sì' : 'No'}</span>
+                                        </div>
+                                      </div>
+                                      
+                                      {spell.description && (
+                                        <div className="spell-expanded-description">
+                                          <h5 className="spell-description-title">Descrizione:</h5>
+                                          <p className={`spell-description-text ${spell.description.length > 200 ? 'long-description' : ''}`}>
+                                            {spell.description}
+                                          </p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  // Vista compatta
+                                  <div className={`spell-compact ${spell.isPrepared ? 'prepared' : 'unprepared'}`}>
+                                    <div 
+                                      className="spell-compact-main"
+                                      onClick={() => openSpellView(spell.id)}
+                                    >
+                                      <div className="spell-compact-info">
+                                        <div className="spell-compact-name">
+                                          <span className="spell-name-text">{spell.name || 'Incantesimo Senza Nome'}</span>
+                                        </div>
+                                        <div className="spell-compact-details">
+                                          {spell.hasDamage && spell.damage && (
+                                            <span className="spell-detail-badge damage">
+                                              ⚔️ {spell.damage}
+                                              {spell.damageType && spellDamageTypes.find(t => t.value === spell.damageType)?.label && 
+                                                ` ${spellDamageTypes.find(t => t.value === spell.damageType).label.toLowerCase()}`
+                                              }
+                                            </span>
+                                          )}
+                                          <div className="spell-mini-icons">
+                                            {spell.hasSavingThrow && (
+                                              <span className="spell-mini-icon saving-throw" title="Ha Tiro Salvezza">S</span>
+                                            )}
+                                            {spell.isRitual && (
+                                              <span className="spell-mini-icon ritual" title="Può essere lanciato come Rituale">R</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="spell-prepared-toggle">
+                                      <button 
+                                        className={`prepared-toggle-btn ${spell.isPrepared ? 'prepared' : 'unprepared'}`}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleSpellPrepared(spell.id, spell.isPrepared);
+                                        }}
+                                        title={spell.isPrepared ? 'Rimuovi preparazione' : 'Prepara incantesimo'}
+                                      >
+                                        {spell.isPrepared ? '✓' : '○'}
+                                      </button>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -1236,7 +2122,7 @@ const CharacterView = () => {
       )}
 
       {/* Navbar inferiore */}
-      <nav className="character-bottom-nav">
+      <nav className={`character-bottom-nav ${fullscreenNote ? 'hidden-fullscreen' : ''}`}>
         <button 
           className={`nav-tab ${activeTab === 'sheet' ? 'active' : ''}`}
           onClick={() => setActiveTab('sheet')}

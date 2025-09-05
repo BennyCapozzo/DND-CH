@@ -59,7 +59,7 @@ const CharacterStats = ({ character }) => {
         <h3 className="stats-title">Tiri Salvezza</h3>
         <div className="saving-throws-grid">
           {Object.entries(statNames).map(([stat, label]) => {
-            const modifier = calculateModifier(character.stats[stat]);
+            const modifier = calculateModifier(character.stats[stat] || 10);
             const hasProficiency = character.proficiencies?.savingThrows?.includes(stat) || false;
             const proficiency = hasProficiency ? (character.proficiencyBonus || 2) : 0;
             const total = modifier + proficiency;
@@ -82,7 +82,7 @@ const CharacterStats = ({ character }) => {
         <div className="skills-grid">
           {Object.entries(skillNames).map(([skill, label]) => {
             const stat = skillStats[skill];
-            const modifier = calculateModifier(character.stats[stat]);
+            const modifier = calculateModifier(character.stats[stat] || 10);
             const hasProficiency = character.proficiencies?.skills?.includes(skill) || false;
             const proficiency = hasProficiency ? (character.proficiencyBonus || 2) : 0;
             const total = modifier + proficiency;

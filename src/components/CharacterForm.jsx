@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { loadCharacters, saveCharacter } from '../utils/storage';
-import { createEmptyCharacter, calculateModifier, calculateSavingThrows, calculateSkills } from '../types/character';
+import { createEmptyCharacter, calculateModifier, calculateSavingThrows, calculateSkills, migrateCharacter } from '../types/character';
 import CharacterStats from './CharacterStats';
 
 const CharacterForm = () => {
@@ -18,7 +18,8 @@ const CharacterForm = () => {
       const characters = loadCharacters();
       const existingCharacter = characters.find(c => c.id === id);
       if (existingCharacter) {
-        setCharacter(existingCharacter);
+        // Migra il personaggio esistente al nuovo formato
+        setCharacter(migrateCharacter(existingCharacter));
       } else {
         navigate('/');
       }
@@ -38,49 +39,28 @@ const CharacterForm = () => {
   };
 
   const handleStatChange = (stat, value) => {
-    const numValue = parseInt(value) || 0;
+    const processedValue = value === '' ? '' : parseInt(value) || '';
     setCharacter(prev => ({
       ...prev,
       stats: {
         ...prev.stats,
-        [stat]: numValue
+        [stat]: processedValue
       },
       updatedAt: new Date().toISOString()
     }));
   };
 
-  const handleCustomFieldChange = (fieldId, value) => {
+  const handleBaseStatChange = (statId, value) => {
     setCharacter(prev => ({
       ...prev,
-      customFields: prev.customFields.map(field => 
-        field.id === fieldId ? { ...field, value } : field
-      ),
+      baseStats: {
+        ...prev.baseStats,
+        [statId]: value
+      },
       updatedAt: new Date().toISOString()
     }));
   };
 
-  const addCustomField = () => {
-    const newField = {
-      id: `custom_${Date.now()}`,
-      label: 'Nuovo Campo',
-      value: '',
-      type: 'text'
-    };
-    
-    setCharacter(prev => ({
-      ...prev,
-      customFields: [...prev.customFields, newField],
-      updatedAt: new Date().toISOString()
-    }));
-  };
-
-  const removeCustomField = (fieldId) => {
-    setCharacter(prev => ({
-      ...prev,
-      customFields: prev.customFields.filter(field => field.id !== fieldId),
-      updatedAt: new Date().toISOString()
-    }));
-  };
 
   const handleSave = () => {
     if (!character.name.trim()) {
@@ -88,9 +68,19 @@ const CharacterForm = () => {
       return;
     }
 
+    // Imposta valori di default per campi vuoti
     const characterToSave = {
       ...character,
       id: character.id || uuidv4(),
+      level: character.level === '' ? 1 : character.level,
+      stats: {
+        strength: character.stats.strength === '' ? 10 : character.stats.strength,
+        dexterity: character.stats.dexterity === '' ? 10 : character.stats.dexterity,
+        constitution: character.stats.constitution === '' ? 10 : character.stats.constitution,
+        intelligence: character.stats.intelligence === '' ? 10 : character.stats.intelligence,
+        wisdom: character.stats.wisdom === '' ? 10 : character.stats.wisdom,
+        charisma: character.stats.charisma === '' ? 10 : character.stats.charisma
+      },
       createdAt: character.createdAt || new Date().toISOString()
     };
 
@@ -159,9 +149,10 @@ const CharacterForm = () => {
               <input
                 type="number"
                 value={character.level}
-                onChange={(e) => handleInputChange('level', parseInt(e.target.value) || 1)}
+                onChange={(e) => handleInputChange('level', e.target.value === '' ? '' : parseInt(e.target.value) || '')}
                 min="1"
                 max="20"
+                placeholder="1"
                 className="form-input"
               />
             </div>
@@ -204,11 +195,12 @@ const CharacterForm = () => {
                     onChange={(e) => handleStatChange(stat, e.target.value)}
                     min="1"
                     max="30"
+                    placeholder="10"
                     className="stat-input"
                   />
                   <div className="stat-modifier">
-                    {calculateModifier(character.stats[stat]) >= 0 ? '+' : ''}
-                    {calculateModifier(character.stats[stat])}
+                    {calculateModifier(character.stats[stat] || 10) >= 0 ? '+' : ''}
+                    {calculateModifier(character.stats[stat] || 10)}
                   </div>
                 </div>
               </div>
@@ -216,59 +208,56 @@ const CharacterForm = () => {
           </div>
         </section>
 
-        {/* Base Stats */}
+        {/* Statistiche Base */}
         <section className="form-section">
-          <div className="section-header">
-            <h2 className="section-title">Base Stats</h2>
-            <button className="add-field-button" onClick={addCustomField}>
-              + Aggiungi Campo
-            </button>
-          </div>
-          
-          <div className="custom-fields">
-            {character.customFields.map((field) => (
-              <div key={field.id} className="custom-field">
-                <div className="custom-field-header">
-                  <input
-                    type="text"
-                    value={field.label}
-                    onChange={(e) => {
-                      const newFields = character.customFields.map(f => 
-                        f.id === field.id ? { ...f, label: e.target.value } : f
-                      );
-                      setCharacter(prev => ({ ...prev, customFields: newFields }));
-                    }}
-                    className="field-label-input"
-                  />
-                  <button 
-                    className="remove-field-button"
-                    onClick={() => removeCustomField(field.id)}
-                  >
-                    🗑️
-                  </button>
-                </div>
-                
-                {field.type === 'textarea' ? (
-                  <textarea
-                    value={field.value}
-                    onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-                    placeholder="Inserisci il valore"
-                    className="form-textarea"
-                    rows="3"
-                  />
-                ) : (
-                  <input
-                    type={field.type}
-                    value={field.value}
-                    onChange={(e) => handleCustomFieldChange(field.id, e.target.value)}
-                    placeholder="Inserisci il valore"
-                    className="form-input"
-                  />
-                )}
-              </div>
-            ))}
+          <h2 className="section-title">Statistiche Base</h2>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Punti Ferita</label>
+              <input
+                type="number"
+                value={character.baseStats?.hitPoints || ''}
+                onChange={(e) => handleBaseStatChange('hitPoints', e.target.value)}
+                placeholder="0"
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Punti Ferita Temporanei</label>
+              <input
+                type="number"
+                value={character.baseStats?.tempHitPoints || ''}
+                onChange={(e) => handleBaseStatChange('tempHitPoints', e.target.value)}
+                placeholder="0"
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Classe Armatura</label>
+              <input
+                type="number"
+                value={character.baseStats?.armorClass || ''}
+                onChange={(e) => handleBaseStatChange('armorClass', e.target.value)}
+                placeholder="10"
+                className="form-input"
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Velocità</label>
+              <input
+                type="text"
+                value={character.baseStats?.speed || ''}
+                onChange={(e) => handleBaseStatChange('speed', e.target.value)}
+                placeholder="9 metri"
+                className="form-input"
+              />
+            </div>
           </div>
         </section>
+
 
         {/* Competenze */}
         <section className="form-section">
