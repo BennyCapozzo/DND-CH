@@ -1,9 +1,9 @@
 {
-    "routes": [
-      { "src": "/", "dest": "/" },
-      { "src": "/character/new", "dest": "/" },
-      { "src": "/character/:id", "dest": "/" },
-      { "src": "/character/:id/edit", "dest": "/" },
-      { "src": "/settings", "dest": "/" }
+    "rewrites": [
+      { "source": "/", "destination": "/" },
+      { "source": "/character/new", "destination": "/" },
+      { "source": "/character/:id", "destination": "/" },
+      { "source": "/character/:id/edit", "destination": "/" },
+      { "source": "/settings", "destination": "/" }
     ]
   }
