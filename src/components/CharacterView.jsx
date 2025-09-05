@@ -1032,7 +1032,7 @@ const CharacterView = () => {
                                   const modifierStr = abilityModifier >= 0 ? `+${abilityModifier}` : `${abilityModifier}`;
                                   
                                   // Trova il label del tipo di danno
-                                  const damageTypeLabel = damageTypes.find(type => type.value === damageType)?.label || damageType;
+                                  const damageTypeLabel = weaponDamageTypes.find(type => type.value === damageType)?.label || damageType;
                                   
                                   return `${diceRoll} ${modifierStr}${damageTypeLabel ? ` ${damageTypeLabel.toLowerCase()}` : ''}`;
                                 })()}

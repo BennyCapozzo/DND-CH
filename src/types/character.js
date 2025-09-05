@@ -137,6 +137,7 @@ export const migrateCharacter = (character) => {
     migratedCharacter.weapons = migratedCharacter.weapons.map(weapon => {
       if (weapon.damage && !weapon.damageDice && !weapon.damageType) {
         const parts = weapon.damage.split(' ');
+        console.log(parts);
         const migratedWeapon = {
           ...weapon,
           damageDice: parts[0] || '',
