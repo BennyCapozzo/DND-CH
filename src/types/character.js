@@ -18,13 +18,13 @@ export const createEmptyCharacter = () => ({
   },
   
   // Bonus di competenza (per calcoli automatici)
-  proficiencyBonus: 2,
+  proficiencyBonus: '',
   
   // Caratteristica di lancio incantesimi
   spellcastingAbility: null, // 'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'
   
   // Statistiche di combattimento
-  damageTaken: 0,
+  damageTaken: '',
   
   // Competenze (array di stringhe)
   proficiencies: {
@@ -130,6 +130,16 @@ export const migrateCharacter = (character) => {
         migratedCharacter.currency[key] = value === 0 ? '' : value.toString();
       }
     });
+  }
+  
+  // Migra il bonus di competenza da numero a stringa per compatibilità
+  if (typeof migratedCharacter.proficiencyBonus === 'number') {
+    migratedCharacter.proficiencyBonus = migratedCharacter.proficiencyBonus === 0 ? '' : migratedCharacter.proficiencyBonus.toString();
+  }
+  
+  // Migra i danni subiti da numero a stringa per compatibilità
+  if (typeof migratedCharacter.damageTaken === 'number') {
+    migratedCharacter.damageTaken = migratedCharacter.damageTaken === 0 ? '' : migratedCharacter.damageTaken.toString();
   }
   
   // Migra le armi dal vecchio formato damage al nuovo formato damageDice + damageType
@@ -262,11 +272,13 @@ export const calculateSpellSaveDC = (character) => {
     );
     const highestStat = Object.keys(statsWithDefaults).reduce((a, b) => statsWithDefaults[a] > statsWithDefaults[b] ? a : b);
     const modifier = calculateModifier(statsWithDefaults[highestStat]);
-    return 8 + character.proficiencyBonus + modifier;
+    const profBonus = parseInt(character.proficiencyBonus) || 2;
+    return 8 + profBonus + modifier;
   }
   
   const modifier = calculateModifier(character.stats[character.spellcastingAbility] || 10);
-  return 8 + character.proficiencyBonus + modifier;
+  const profBonus = parseInt(character.proficiencyBonus) || 2;
+  return 8 + profBonus + modifier;
 };
 
 // Calcola il tiro per colpire di un'arma
@@ -278,7 +290,7 @@ export const calculateWeaponHit = (character, weapon) => {
   const abilityModifier = calculateModifier(statValue);
   
   // Aggiungi il bonus di competenza se competente
-  const proficiencyBonus = weapon.isProficient ? (character.proficiencyBonus || 2) : 0;
+  const proficiencyBonus = weapon.isProficient ? (parseInt(character.proficiencyBonus) || 2) : 0;
   
   const totalBonus = abilityModifier + proficiencyBonus;
   

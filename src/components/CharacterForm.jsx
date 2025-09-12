@@ -268,10 +268,11 @@ const CharacterForm = () => {
             <label className="form-label">Bonus di Competenza</label>
             <input
               type="number"
-              value={character.proficiencyBonus || 2}
-              onChange={(e) => handleInputChange('proficiencyBonus', parseInt(e.target.value) || 2)}
+              value={character.proficiencyBonus}
+              onChange={(e) => handleInputChange('proficiencyBonus', e.target.value === '' ? '' : parseInt(e.target.value) || '')}
               min="1"
               max="6"
+              placeholder="2"
               className="form-input proficiency-input"
             />
           </div>

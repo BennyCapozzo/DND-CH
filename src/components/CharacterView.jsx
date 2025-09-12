@@ -107,7 +107,7 @@ const CharacterView = () => {
     setCharacter(prev => {
       const updatedCharacter = {
         ...prev,
-        damageTaken: parseInt(value) || 0,
+        damageTaken: value === '' ? '' : parseInt(value) || '',
         updatedAt: new Date().toISOString()
       };
       
@@ -382,7 +382,7 @@ const CharacterView = () => {
     const newItem = {
       id: Date.now().toString(),
       name: '',
-      quantity: 1
+      quantity: ''
     };
     
     setCharacter(prev => {
@@ -521,7 +521,7 @@ const CharacterView = () => {
       // Applica i valori di default prima del salvataggio
       const processedSpell = {
         ...tempSpell,
-        level: tempSpell.level === '' ? 1 : parseInt(tempSpell.level) || 1
+        level: tempSpell.level === '' ? 1 : (parseInt(tempSpell.level) >= 0 ? parseInt(tempSpell.level) : 1)
       };
       
       setCharacter(prev => {
@@ -545,7 +545,7 @@ const CharacterView = () => {
             spell.id === spellId 
               ? {
                   ...spell,
-                  level: spell.level === '' ? 1 : parseInt(spell.level) || 1
+                  level: spell.level === '' ? 1 : (parseInt(spell.level) >= 0 ? parseInt(spell.level) : 1)
                 }
               : spell
           ),
@@ -758,10 +758,11 @@ const CharacterView = () => {
               <input
                 type="number"
                 value={character.level}
-                onChange={(e) => handleFieldChange('level', parseInt(e.target.value) || 1)}
+                onChange={(e) => handleFieldChange('level', e.target.value === '' ? '' : parseInt(e.target.value) || '')}
                 className="inline-input"
                 min="1"
                 max="20"
+                placeholder="1"
               />
             </div>
             <div className="info-row">
@@ -843,7 +844,7 @@ const CharacterView = () => {
               <span className="stat-label">Danni Subiti</span>
               <input
                 type="number"
-                value={character.damageTaken || 0}
+                value={character.damageTaken}
                 onChange={(e) => handleDamageTakenChange(e.target.value)}
                 className="damage-input"
                 placeholder="0"
@@ -1255,11 +1256,12 @@ const CharacterView = () => {
                       <div className="item-quantity">
                         <input
                           type="number"
-                          value={item.quantity || 1}
-                          onChange={(e) => updateInventoryItem(item.id, 'quantity', parseInt(e.target.value) || 1)}
+                          value={item.quantity}
+                          onChange={(e) => updateInventoryItem(item.id, 'quantity', e.target.value === '' ? '' : parseInt(e.target.value) || '')}
                           className="quantity-input"
                           min="1"
                           max="999"
+                          placeholder="1"
                         />
                       </div>
                       <div className="item-name">
